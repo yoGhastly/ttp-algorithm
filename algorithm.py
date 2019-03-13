@@ -148,14 +148,60 @@ def get_travel_cost(solution):
             for item in items_for_city:
                 if(list_of_choosed_items.__contains__(item)):
                     current_cap += item[2]
+                    solution[2].append(item)
         itr += 1
 
     travel_cost += get_travel_time(len(route)-1,0,current_cap)          # Back to first city
 
     return travel_cost
 
-solut = generate_TSP_solution()
 
 
-print(get_travel_cost(solut))
+def mutate(solution):
+    route = solution[0]
+    index_1 = random.randint(0,route.__len__()-1)
+    index_2 = random.randint(0,route.__len__()-1)
+    while index_2 == index_1:
+        index_2 = random.randint(0, route.__len__() - 1)
+    route[index_1],route[index_2] = route[index_2],route[index_1]
 
+    if(random.randint(0,101) <= 2):                     #Super mutation chance
+        index_1 = random.randint(0, route.__len__() - 1)
+        index_2 = random.randint(0, route.__len__() - 1)
+        while index_2 == index_1:
+            index_2 = random.randint(0, route.__len__() - 1)
+        route[index_1], route[index_2] = route[index_2], route[index_1]
+    return route
+
+
+# I'M ONLY RETURNING ROUTE - NOT WHOLE SOLUTION
+def crossover(solution1,solution2):
+    parent_1 = solution1[0]
+    parent_2 = solution2[0]
+    children1 = parent_1
+    children2 = parent_2
+
+    index_pool_1 = list(parent_1)                 # we will need pool of all indexes to fix our children
+    index_pool_2 = list(parent_1)
+
+    divide_index = round(parent_1.__len__()/2)
+
+    for x in range (divide_index):
+        index_pool_1.remove(parent_1[x])
+        index_pool_2.remove(parent_2[x])
+
+    for x in range (divide_index,parent_1.__len__()):
+
+        if children1[:x].__contains__(parent_2[x]):
+            children1[x] = random.choice(index_pool_1)
+        else:
+            children1[x] = parent_2[x]
+        index_pool_1.remove(children1[x])
+
+        if children2[:x].__contains__(parent_1[x]):
+            children2[x] = random.choice(index_pool_2)
+        else:
+            children2[x] = parent_1[x]
+        index_pool_2.remove(children2[x])
+
+    return children1,children2
