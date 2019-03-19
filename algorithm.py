@@ -1,207 +1,82 @@
+# or rather metaheuristic :)
 import random
-import loader
+
 import pandas as pd
 import numpy as np
-from operator import itemgetter
-
-np.set_printoptions(threshold=np.nan)
-
-
-# Data import
-
-basic_info, nodes, items = loader.load('medium_0.ttp')
-
-KNP_greedy_strategies = ['most_expensive','lightest','best_ratio']  #ratio = profit/weight
-
-#Calculate max amount of items
-def max_amount_items():
-    return np.max(np.bincount(items.transpose()[3]))
-
-# Assign items to cities
-
-# city_item_list[city_index - 1] = list of items for city with city_index      /each item is stored as a list [index,profit,weight]
-
-city_item_list = [None] * len(items)
-for x in range (len(items)):
-    if(city_item_list[items[x][3] -1] is None):
-        city_item_list[items[x][3] - 1] = [list(items[x][:3])]
-    else:
-        city_item_list[(items[x][3] - 1)].append(list(items[x][:3]))
+import tools
+from models import Solution
 
 
-# Gathering index
+def initialize(size_of_population):
+    population = np.empty(shape=(size_of_population, 1), dtype=object)
+    for x in range(size_of_population):
+        random_solution = tools.generate_TSP_solution()
+        random_strategy = random.choice(tools.KNP_greedy_strategies)
+        t_cost = tools.get_travel_cost(random_solution)[0]
 
-index_array = np.zeros(shape=nodes.__len__(), dtype=int)
-for x in range(nodes.__len__()):
-    index_array[x] = (nodes[x][0])
-
-# Calculate distance - pythagoras
-
-distance_array = np.zeros(shape=[nodes.__len__(), nodes.__len__()])
-for x in range(nodes.__len__()):
-    distance_array[x] = np.power(np.power(nodes.transpose()[1] - nodes[x][1],2) + np.power(nodes.transpose()[2] - nodes[x][2],2),1/2)
-
-
-# Generate random TSP solution
-
-def generate_TSP_solution():
-    index_pool = list(np.copy(index_array))
-    route = np.empty(shape=index_array.__len__())
-
-    for x in range (index_array.__len__()):
-        node_index = random.choice(index_pool)
-        route[x] = node_index
-        index_pool.remove(node_index)
-    return [route,0,[]]  # returning [route, current KPN weight, list of items]
-
-
-# Calculate velocity
-def get_velocity(current_cap):
-    return basic_info["max speed"] - current_cap*((basic_info["max speed" ]- basic_info["min speed"])/basic_info["KNP cap"])
-
-# Calculate time - f(x) function
-def get_travel_time(start_index,destination_index,curr_cap):
-        return distance_array[start_index][destination_index]/get_velocity(curr_cap)
-
-
-# Get all items for a city
-def get_items_for_city(index):
-    """:rtype: list"""
-    result = []
-    result = city_item_list[index-1]
-    return result
-
-# Get list of all items:
-def get_all_items():
-    all_items=[]
-    for x in items:
-        all_items.append(list(x[:3]))
-    return all_items
-
-# Get item - use this function if u assume that we're trying to pick up items every time we visit a city
-
-def get_item(city_index,strategy,current_cap):
-    picked_item = None
-    city_items = []
-    if(strategy == 'most_expensive'):
-        city_items = sorted(city_item_list[city_index - 1].copy(),key=itemgetter(1),reverse=True)   # copy array and sort items by profit
-
-    # - HAVEN'T TESTED IT YET
-    elif(strategy=='lightest'):
-        city_items = sorted(city_item_list[city_index - 1].copy(), key=itemgetter(2))  # copy array and sort items by weight(lighter first)
-
-    while city_items.__len__()> 0 and picked_item is None:
-        if(basic_info['KNP cap'] - current_cap >= city_items[0][2]): # if we have cap
-            picked_item = city_items[0]
-        else:
-            city_items.remove(city_items[0])
-    return picked_item
-
-# Use this if you know whole item pool before you start moving between cities
-def get_list_of_ordered_items(strategy):
-
-    ordered_list=[]
-    if (strategy == 'most_expensive'):
-        ordered_list = sorted(get_all_items(),key=itemgetter(1),reverse=True)
-    elif(strategy=='lightest'):
-        ordered_list = sorted(get_all_items(), key=itemgetter(2))
-    elif(strategy == 'best_ratio'):
-        ratio_ranking = np.empty(shape=(get_all_items().__len__(),2))  # [node_index,ratio] X 510
-        all_items=get_all_items()
-        for x in range(all_items.__len__()):
-            ratio_ranking[x]=np.array([all_items[x][0],all_items[x][1] / all_items[x][2]])
-        ratio_ranking = np.flip(ratio_ranking[ratio_ranking[:,1].argsort()],0)
-
-        #Garbage code
-        for x in ratio_ranking:
-            for y in all_items:
-                if(x[0]==y[0]):
-                    ordered_list.append(y)
-
-    solution=[]
-    sum_weight=0
-    itr=0
-    while sum_weight + ordered_list[itr + 1][1] < basic_info['KNP cap']:
-        solution.append(ordered_list[itr])
-        sum_weight+= ordered_list[itr][1]
-        itr += 1
-    return solution
-
-# Sum of picked items - g(y)
-def sum_item_values(solution):
-    return sum(profit for inx , profit , weight in solution[2])
-
-# Travel cost  - f(x,y)
-def get_travel_cost(solution):
-
-    list_of_choosed_items = get_list_of_ordered_items('best_ratio')
-    travel_cost = 0
-    route = solution[0]
-    itr =0
-    current_cap = solution[1]
-
-    while itr + 1 < len(route):
-        travel_cost += get_travel_time(int(route[itr])-1 ,int(route[itr+1])-1,current_cap)
-
-        items_for_city = get_items_for_city(int(route[itr]))
-        if (items_for_city is not None):
-            for item in items_for_city:
-                if(list_of_choosed_items.__contains__(item)):
-                    current_cap += item[2]
-                    solution[2].append(item)
-        itr += 1
-
-    travel_cost += get_travel_time(len(route)-1,0,current_cap)          # Back to first city
-
-    return travel_cost
+        population[x] = Solution(x, random_solution, tools.get_list_of_ordered_items(random_strategy), t_cost, random_strategy)
+    return population
 
 
 
-def mutate(solution):
-    route = solution[0]
-    index_1 = random.randint(0,route.__len__()-1)
-    index_2 = random.randint(0,route.__len__()-1)
-    while index_2 == index_1:
-        index_2 = random.randint(0, route.__len__() - 1)
-    route[index_1],route[index_2] = route[index_2],route[index_1]
+#Get score for each solution
+def evaluate(solution_ranking):
+    for x in range (solution_ranking.__len__()):
+        solution_ranking['score'][x] = solution_ranking['solutions'][x][0].travel_time
+    return solution_ranking.sort_values(by=['score'], ascending=False).reset_index(drop=True)                           #return sorted by score
 
-    if(random.randint(0,101) <= 2):                     #Super mutation chance
-        index_1 = random.randint(0, route.__len__() - 1)
-        index_2 = random.randint(0, route.__len__() - 1)
-        while index_2 == index_1:
-            index_2 = random.randint(0, route.__len__() - 1)
-        route[index_1], route[index_2] = route[index_2], route[index_1]
-    return route
+def crossing_over(solution_ranking,size_of_population):
+    solution_ranking = solution_ranking.reset_index(drop=True)
+    solutions = []
+    score_list = []
+
+    max_sol_index = 0
+
+    for x in range(solution_ranking.__len__()):                                                                         #Find max(SolutionIndex)
+        if(solution_ranking['solutions'][x][0].index > max_sol_index):
+            max_sol_index = solution_ranking['solutions'][x][0].index
+
+    while(solution_ranking.__len__() + solutions.__len__() < size_of_population):                                       #generating solutions via crossing-over
+        parent_index_1, parent_index_2 = tools.getTwoDiff(solution_ranking.__len__() - 1)
+
+        child_route = tools.crossover_new_route(solution_ranking['solutions'][parent_index_1][0].route,solution_ranking['solutions'][parent_index_2][0].route)
+        random_strategy = random.choice([solution_ranking['solutions'][parent_index_1][0].strategy,solution_ranking['solutions'][parent_index_2][0].strategy])
+        t_cost = tools.get_travel_cost(child_route)[0]
+        solutions.append([Solution(max_sol_index, child_route, tools.get_list_of_ordered_items(random_strategy), t_cost, random_strategy)])
+        score_list.append(t_cost)
+        max_sol_index += 1
 
 
-# I'M ONLY RETURNING ROUTE - NOT WHOLE SOLUTION
-def crossover(solution1,solution2):
-    parent_1 = solution1[0]
-    parent_2 = solution2[0]
-    children1 = parent_1
-    children2 = parent_2
+    new_solutions = pd.DataFrame()
+    new_solutions['solutions'] = solutions
+    new_solutions['score'] = score_list
+    new_solutions.index = np.arange(solution_ranking.__len__(), solution_ranking.__len__() +new_solutions.__len__())    #reindexing new solutions
 
-    index_pool_1 = list(parent_1)                 # we will need pool of all indexes to fix our children
-    index_pool_2 = list(parent_1)
+    return pd.concat([solution_ranking,new_solutions])                                                                  #return merged old and new solutions
 
-    divide_index = round(parent_1.__len__()/2)
+def mutate(solution_ranking,chance_of_mutation):                                                                        #chance_of_mut range 0.00 - 1.00
+        for x in range (solution_ranking.__len__()):
+            if(random.random() < chance_of_mutation):
+                solution_ranking['solutions'][x][0].mutate()
+        return solution_ranking
 
-    for x in range (divide_index):
-        index_pool_1.remove(parent_1[x])
-        index_pool_2.remove(parent_2[x])
+def evolution(size_of_population,num_of_generations,tour_precentage,chance_of_mutation):
 
-    for x in range (divide_index,parent_1.__len__()):
+    population = initialize(size_of_population)
 
-        if children1[:x].__contains__(parent_2[x]):
-            children1[x] = random.choice(index_pool_1)
-        else:
-            children1[x] = parent_2[x]
-        index_pool_1.remove(children1[x])
+    solution_ranking = pd.DataFrame()
+    solution_ranking['solutions'] = population.tolist()
+    solution_ranking['score'] = np.empty(shape=(size_of_population , 1), dtype=float).tolist()
 
-        if children2[:x].__contains__(parent_1[x]):
-            children2[x] = random.choice(index_pool_2)
-        else:
-            children2[x] = parent_1[x]
-        index_pool_2.remove(children2[x])
+    for x in range (num_of_generations):
+        solution_ranking = evaluate(solution_ranking)
 
-    return children1,children2
+        solution_ranking = tools.tournament(solution_ranking, tour_precentage)
+
+        solution_ranking = crossing_over(solution_ranking,size_of_population)
+
+        solution_ranking = mutate(solution_ranking,chance_of_mutation)
+
+    print(solution_ranking)
+
+evolution(100,100,0.20,0.07)
