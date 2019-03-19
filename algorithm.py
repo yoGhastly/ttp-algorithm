@@ -68,6 +68,12 @@ def evolution(size_of_population,num_of_generations,tour_precentage,chance_of_mu
     solution_ranking['solutions'] = population.tolist()
     solution_ranking['score'] = np.empty(shape=(size_of_population , 1), dtype=float).tolist()
 
+    generations = pd.DataFrame(index=np.arange(0,num_of_generations), columns=['AVG','MIN','MAX'])
+    generations = generations.fillna(0)
+    generations['AVG'][2]=15
+    max = generations['AVG'].mean()
+
+
     for x in range (num_of_generations):
         solution_ranking = evaluate(solution_ranking)
 
@@ -77,6 +83,10 @@ def evolution(size_of_population,num_of_generations,tour_precentage,chance_of_mu
 
         solution_ranking = mutate(solution_ranking,chance_of_mutation)
 
-    print(solution_ranking)
+        generations['AVG'][x] = solution_ranking['score'].mean()
+        generations['MIN'][x] = solution_ranking['score'].min()
+        generations['MAX'][x] = solution_ranking['score'].max()
+
+    print(generations)
 
 evolution(100,100,0.20,0.07)
