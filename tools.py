@@ -3,13 +3,15 @@ import loader
 import numpy as np
 import pandas as pd
 from operator import itemgetter
+import time
+start_time = time.time()
 
 np.set_printoptions(threshold=np.nan)
 
 
 # Data import
 
-basic_info, nodes, items = loader.load('medium_0.ttp')
+basic_info, nodes, items = loader.load('medium_1.ttp')
 
 KNP_greedy_strategies = ['most_expensive','lightest','best_ratio']  #ratio = profit/weight
 
@@ -73,10 +75,7 @@ def get_items_for_city(index):
 
 # Get list of all items:
 def get_all_items():
-    all_items=[]
-    for x in items:
-        all_items.append(list(x[:3]))
-    return all_items
+    return items[:, [0, 1, 2]].tolist()
 
 # Get item - use this function if u assume that u're trying to pick up items every time we visit a city
 
@@ -106,58 +105,76 @@ def get_list_of_ordered_items(strategy):
     elif(strategy==KNP_greedy_strategies[1]):                                                                           #lightest
         ordered_list = sorted(get_all_items(), key=itemgetter(2))
     elif(strategy == KNP_greedy_strategies[2]):                                                                         #best ratio
-        ratio_ranking = np.empty(shape=(get_all_items().__len__(),2))                                                   #[node_index,ratio] X 510
+                                                                                                                        #[node_index,ratio] X 510
         all_items=get_all_items()
-        for x in range(all_items.__len__()):
-            ratio_ranking[x]=np.array([all_items[x][0],all_items[x][1] / all_items[x][2]])
-        ratio_ranking = np.flip(ratio_ranking[ratio_ranking[:,1].argsort()],0)
+        ratio_result =[None] * all_items.__len__()
 
-        #Garbage code
-        for x in ratio_ranking:
-            for y in all_items:
-                if(x[0]==y[0]):
-                    ordered_list.append(y)
+        for x in range(all_items.__len__()):
+            ratio_result[x] = (all_items[x][1] / all_items[x][2])
+
+        items_ranking = pd.DataFrame()
+        items_ranking['solutions'] = all_items
+        items_ranking['score'] = ratio_result
+
+        items_ranking.sort_values(by = ['score'], inplace=True, ascending=False)
+
 
     solution=[]
-    sum_weight=0
-    itr=0
+    sum_weight = 0
+    itr = 0
+    if(ordered_list.__len__()>0):                                                                                       # first and second option
+        while sum_weight + ordered_list[itr + 1][1] < basic_info['KNP cap']:
+            solution.append(ordered_list[itr])
+            sum_weight += ordered_list[itr][1]
+            itr += 1
+    else:                                                                                                               # third - dataframe
+        items_ordered_by_ratio = items_ranking['solutions'].tolist()
 
-    while sum_weight + ordered_list[itr + 1][1] < basic_info['KNP cap']:
-        solution.append(ordered_list[itr])
-        sum_weight+= ordered_list[itr][1]
-        itr += 1
+        next_step_val = 0
+        while (next_step_val < basic_info['KNP cap']):
+            sum_weight += items_ordered_by_ratio[itr][1]
+            itr += 1
+            next_step_val = sum_weight + items_ranking['score'][itr]
+        solution = items_ordered_by_ratio[:itr]
     return solution
 
+
+# ['most_expensive','lightest','best_ratio']
+#print(get_list_of_ordered_items('best_ratio'))
+#print("--- %s seconds ---" % (time.time() - start_time))
+
+
 # Sum of picked items - g(y)
-def sum_item_values(solution):
-    return sum(profit for inx , profit , weight in solution[2])
+
+def sum_item_values(itemlist):
+    return sum(profit for inx , profit , weight in itemlist)
+
 
 # Travel cost  - f(x,y)
-def get_travel_cost(solution):
+def get_travel_cost(route,strategy):
 
-    list_of_choosed_items = get_list_of_ordered_items('best_ratio')
+    list_of_choosed_items = get_list_of_ordered_items(strategy)
     travel_cost = 0
-    route = solution
     itr =0
     current_cap = 0
-    item_list = []
 
     while itr + 1 < len(route):
         travel_cost += get_travel_time(int(route[itr])-1 ,int(route[itr+1])-1,current_cap)
-
         items_for_city = get_items_for_city(int(route[itr]))
         if (items_for_city is not None):
             for item in items_for_city:
                 if(list_of_choosed_items.__contains__(item)):
                     current_cap += item[2]
-                    item_list.append(item)
+
         itr += 1
 
     travel_cost += get_travel_time(len(route)-1,0,current_cap)          # Back to first city
 
-    return (travel_cost,item_list)    #Travel_cost & list of items
+    return travel_cost    #Travel_cost
 
-
+# Getting fitness of a solution - we need to minimalize it
+def getFitness(time,sum_value):
+    return  time - sum_value
 
 # I'M ONLY RETURNING ROUTE
 def crossover_new_route(parent_1, parent_2):

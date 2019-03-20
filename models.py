@@ -1,13 +1,11 @@
 import random
-
 import tools
 
 
 class Solution():
-    def __init__(self,index,route,item_list,travel_time,strategy):
+    def __init__(self,index,route,travel_time,strategy):
         self.index = index
         self.route = route
-        self.item_list = item_list
         self.travel_time = travel_time
         self.strategy = strategy
 

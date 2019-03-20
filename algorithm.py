@@ -1,20 +1,23 @@
 # or rather metaheuristic :)
+import cProfile
 import random
-
 import pandas as pd
 import numpy as np
 import tools
 from models import Solution
 
 
+
+
 def initialize(size_of_population):
     population = np.empty(shape=(size_of_population, 1), dtype=object)
+
     for x in range(size_of_population):
         random_solution = tools.generate_TSP_solution()
         random_strategy = random.choice(tools.KNP_greedy_strategies)
-        t_cost = tools.get_travel_cost(random_solution)[0]
+        t_cost = tools.get_travel_cost(random_solution,random_strategy)
 
-        population[x] = Solution(x, random_solution, tools.get_list_of_ordered_items(random_strategy), t_cost, random_strategy)
+        population[x] = Solution(x, random_solution, t_cost, random_strategy )
     return population
 
 
@@ -22,7 +25,10 @@ def initialize(size_of_population):
 #Get score for each solution
 def evaluate(solution_ranking):
     for x in range (solution_ranking.__len__()):
-        solution_ranking['score'][x] = solution_ranking['solutions'][x][0].travel_time
+        solution_strategy = solution_ranking['solutions'][x][0].strategy
+        item_profit = tools.sum_item_values(tools.get_list_of_ordered_items(solution_strategy))
+        travel_time = solution_ranking['solutions'][x][0].travel_time
+        solution_ranking['score'][x] = tools.getFitness(travel_time,item_profit)
     return solution_ranking.sort_values(by=['score'], ascending=False).reset_index(drop=True)                           #return sorted by score
 
 def crossing_over(solution_ranking,size_of_population):
@@ -41,9 +47,14 @@ def crossing_over(solution_ranking,size_of_population):
 
         child_route = tools.crossover_new_route(solution_ranking['solutions'][parent_index_1][0].route,solution_ranking['solutions'][parent_index_2][0].route)
         random_strategy = random.choice([solution_ranking['solutions'][parent_index_1][0].strategy,solution_ranking['solutions'][parent_index_2][0].strategy])
-        t_cost = tools.get_travel_cost(child_route)[0]
-        solutions.append([Solution(max_sol_index, child_route, tools.get_list_of_ordered_items(random_strategy), t_cost, random_strategy)])
-        score_list.append(t_cost)
+        t_cost = tools.get_travel_cost(child_route,random_strategy)
+        solution = Solution(max_sol_index, child_route, t_cost, random_strategy)
+        solutions.append([solution])                                                                                    #need to put in into list -
+
+        solution_strategy = solution_ranking['solutions'][x][0].strategy
+        item_profit = tools.sum_item_values(tools.get_list_of_ordered_items(solution_strategy))
+
+        score_list.append(tools.getFitness(solution.travel_time,item_profit))                                                                                       # hard to shortly explain
         max_sol_index += 1
 
 
@@ -70,9 +81,6 @@ def evolution(size_of_population,num_of_generations,tour_precentage,chance_of_mu
 
     generations = pd.DataFrame(index=np.arange(0,num_of_generations), columns=['AVG','MIN','MAX'])
     generations = generations.fillna(0)
-    generations['AVG'][2]=15
-    max = generations['AVG'].mean()
-
 
     for x in range (num_of_generations):
         solution_ranking = evaluate(solution_ranking)
@@ -90,3 +98,5 @@ def evolution(size_of_population,num_of_generations,tour_precentage,chance_of_mu
     print(generations)
 
 evolution(100,100,0.20,0.07)
+
+
