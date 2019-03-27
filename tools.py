@@ -44,6 +44,8 @@ distance_array = np.zeros(shape=[nodes.__len__(), nodes.__len__()])
 for x in range(nodes.__len__()):
     distance_array[x] = np.power(np.power(nodes.transpose()[1] - nodes[x][1],2) + np.power(nodes.transpose()[2] - nodes[x][2],2),1/2)
 
+def get_Matrix():
+    return distance_array
 
 # Generate random TSP solution
 
@@ -143,6 +145,9 @@ def get_list_of_ordered_items(strategy):
 #print(get_list_of_ordered_items('best_ratio'))
 #print("--- %s seconds ---" % (time.time() - start_time))
 
+items_ordered_me,items_ordered_li,items_ordered_br= get_list_of_ordered_items('most_expensive'),get_list_of_ordered_items('lightest'),get_list_of_ordered_items('best_ratio')
+
+
 
 # Sum of picked items - g(y)
 
@@ -151,9 +156,7 @@ def sum_item_values(itemlist):
 
 
 # Travel cost  - f(x,y)
-def get_travel_cost(route,strategy):
-
-    list_of_choosed_items = get_list_of_ordered_items(strategy)
+def get_travel_cost(route,list_of_choosed_items):
     travel_cost = 0
     itr =0
     current_cap = 0
@@ -178,80 +181,35 @@ def getFitness(time,sum_value):
 
 # I'M ONLY RETURNING ROUTE
 def crossover_new_route(parent_1, parent_2):
-
-    children1 = parent_1
-
-    index_pool_1 = list(parent_1)                 # we will need pool of all indexes to fix our children
-
-    divide_index = round(parent_1.__len__()/2)
-
-    for x in range (divide_index):
-        index_pool_1.remove(parent_1[x])
-
-    for x in range (divide_index,parent_1.__len__()):
-
-        if children1[:x].__contains__(parent_2[x]):
-            children1[x] = random.choice(index_pool_1)
-        else:
-            children1[x] = parent_2[x]
-        index_pool_1.remove(children1[x])
-
-    return children1
-
-
-
-def tournament(solution_ranking,percentage):                                                                            #precentage range 0.00 - 1.00
-
-    size_of_tournament = int(np.floor(solution_ranking.__len__() * percentage))
-    if(size_of_tournament % 2):
-        size_of_tournament += 1
-
-    candidates_pool = solution_ranking.copy()
-
-    tournament_participants = pd.DataFrame()
-
-
-    # Picking participants
-    picked_indexes=[]
-
-    for x in range(size_of_tournament):
-        participant_index = random.randint(0,solution_ranking.__len__() - 1)
-        while(picked_indexes.__contains__(participant_index)):
-            participant_index = random.randint(0, solution_ranking.__len__() - 1)
-        picked_indexes.append(participant_index)
-
-        row = candidates_pool.loc[participant_index]
-        candidates_pool = candidates_pool.drop(participant_index, axis=0)
-        tournament_participants = tournament_participants.append(row)
-
-    tournament_participants =  tournament_participants.reset_index(drop=True)
-
-    #Fight!
-    picked_indexes = []
-    starting_number_of_contestants = tournament_participants.__len__()
-    while(tournament_participants.__len__()>0):
-
-        duel_candidate_1_inx, duel_candidate_2_inx = getTwoDiff(starting_number_of_contestants - 1)
-
-        while(duel_candidate_1_inx == duel_candidate_2_inx or picked_indexes.__contains__(duel_candidate_1_inx) or  picked_indexes.__contains__(duel_candidate_2_inx) ):
-            duel_candidate_1_inx, duel_candidate_2_inx = getTwoDiff(starting_number_of_contestants - 1)
-
-        picked_indexes.append(duel_candidate_1_inx)
-        picked_indexes.append(duel_candidate_2_inx)
+    parent_1 = np.asarray(parent_1)
+    parent_2 = np.asarray(parent_2)
+    childPath = np.empty(parent_2.shape[0], dtype=np.int)
+    start = random.randint(1, int(parent_1.shape[0] / 2))
+    end = random.randint(int(parent_1.shape[0] / 2) + 1, parent_1.shape[0] - 1)
+    slice = parent_1[start: end]
+    childPath[start: end] = slice
+    indexesToDelete = np.empty(slice.shape[0], dtype=np.int)
+    for i in range(slice.shape[0]):
+        for j in range(parent_2.shape[0]):
+            if slice[i] == parent_2[j]:
+                indexesToDelete[i] = j
+    valuesToInsert = np.delete(parent_2, indexesToDelete)
+    i = len(childPath) - 1
+    lastUsedIndex = len(valuesToInsert) - 1
+    while i >= end:
+        childPath[i] = valuesToInsert[lastUsedIndex]
+        i -= 1
+        lastUsedIndex -= 1
+    i = start - 1
+    while i >= 0:
+        childPath[i] = valuesToInsert[lastUsedIndex]
+        lastUsedIndex -= 1
+        i -= 1
+    return childPath.tolist()
 
 
 
-        duel_candidate_1 = tournament_participants.loc[duel_candidate_1_inx]
-        duel_candidate_2 = tournament_participants.loc[duel_candidate_2_inx]
 
-
-        if(duel_candidate_1['score'] > duel_candidate_2['score']):
-            candidates_pool = candidates_pool.append(duel_candidate_2)
-        else:
-            candidates_pool = candidates_pool.append(duel_candidate_1)
-        tournament_participants = tournament_participants.drop([duel_candidate_1_inx,duel_candidate_2_inx], axis=0)
-
-    return candidates_pool
 
 # Returns two different values from certain range
 def getTwoDiff(range):
@@ -260,3 +218,12 @@ def getTwoDiff(range):
     while (index_1 == index_2):
         index_2 = random.randint(0,range)
     return index_1,index_2
+
+def getDiff(index_1,range):
+    index_2 = random.randint(0,range)
+    while (index_1 == index_2):
+        index_2 = random.randint(0,range)
+    return index_2
+
+def remove_duplicates(x):
+  return list(dict.fromkeys(x))

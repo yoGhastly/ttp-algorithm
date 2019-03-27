@@ -3,15 +3,13 @@ import tools
 
 
 class Solution():
-    def __init__(self,index,route,travel_time,strategy):
-        self.index = index
+    def __init__(self,route,strategy):
         self.route = route
-        self.travel_time = travel_time
         self.strategy = strategy
 
 
     def __str__(self):
-        return ( 'Index: ' + str(self.index) + ' Route: ' + str(self.route) + ' Travel time: ' + str(self.travel_time) +'  Strategy: ' + str(self.strategy))
+        return ( ' Route: ' + str(self.route)  +'  Strategy: ' + str(self.strategy))
 
     def mutate(self):
         route = self.route
