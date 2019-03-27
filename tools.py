@@ -13,6 +13,8 @@ np.set_printoptions(threshold=np.nan)
 
 basic_info, nodes, items = loader.load('medium_1.ttp')
 
+print(items)
+
 KNP_greedy_strategies = ['most_expensive','lightest','best_ratio']  #ratio = profit/weight
 
 #Calculate max amount of items
@@ -23,9 +25,11 @@ def max_amount_items():
 
 # city_item_list[city_index - 1] = list of items for city with city_index      /each item is stored as a list [index,profit,weight]
 
-city_item_list = [None] * len(items)
+city_item_list = [None] * int(basic_info['dimensions'])
+
 
 for x in range (len(items)):
+
     if(city_item_list[items[x][3] -1] is None):
         city_item_list[items[x][3] - 1] = [list(items[x][:3])]
     else:
@@ -184,27 +188,32 @@ def crossover_new_route(parent_1, parent_2):
     parent_1 = np.asarray(parent_1)
     parent_2 = np.asarray(parent_2)
     childPath = np.empty(parent_2.shape[0], dtype=np.int)
+
     start = random.randint(1, int(parent_1.shape[0] / 2))
     end = random.randint(int(parent_1.shape[0] / 2) + 1, parent_1.shape[0] - 1)
-    slice = parent_1[start: end]
-    childPath[start: end] = slice
-    indexesToDelete = np.empty(slice.shape[0], dtype=np.int)
-    for i in range(slice.shape[0]):
+
+    part_to_enter = parent_1[start: end]
+    childPath[start: end] = part_to_enter
+
+    indexesToDelete = np.empty(part_to_enter.shape[0], dtype=np.int)
+
+    for i in range(part_to_enter.shape[0]):
         for j in range(parent_2.shape[0]):
-            if slice[i] == parent_2[j]:
+            if part_to_enter[i] == parent_2[j]:
                 indexesToDelete[i] = j
-    valuesToInsert = np.delete(parent_2, indexesToDelete)
-    i = len(childPath) - 1
-    lastUsedIndex = len(valuesToInsert) - 1
-    while i >= end:
-        childPath[i] = valuesToInsert[lastUsedIndex]
-        i -= 1
-        lastUsedIndex -= 1
-    i = start - 1
-    while i >= 0:
-        childPath[i] = valuesToInsert[lastUsedIndex]
-        lastUsedIndex -= 1
-        i -= 1
+    val_pool = np.delete(parent_2, indexesToDelete)
+    itr = len(childPath) - 1
+
+    pointer = len(val_pool) - 1
+    while itr >= end:
+        childPath[itr] = val_pool[pointer]
+        itr -= 1
+        pointer -= 1
+    itr = start - 1
+    while itr >= 0:
+        childPath[itr] = val_pool[pointer]
+        pointer -= 1
+        itr -= 1
     return childPath.tolist()
 
 

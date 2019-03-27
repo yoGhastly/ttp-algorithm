@@ -131,13 +131,13 @@ def evolution(size_of_population,num_of_generations,elim_type,cross_chance,tour,
         print("--- %s seconds ---" % (time.time() - start_time))
 
     print(generations)
-    generations.to_csv('mid_0'+elim_type+'_g_'+str(num_of_generations)+'p'+str(size_of_population)+'_cr_'
+    generations.to_csv('mid_1'+elim_type+'_g_'+str(num_of_generations)+'p'+str(size_of_population)+'_cr_'
    +str(cross_chance) +'_t_'+str(tour)+'_m_'+str(chance_of_mutation),sep='\t')
 
 
 
 
-evolution(100,100,'tournament',0.7,10,0.01)
+#evolution(10,50,'tournament',0.7,5,0.01)
 
 
 def greedy_solution():
