@@ -9,7 +9,7 @@ class Solution():
 
 
     def __str__(self):
-        return ( ' Route: ' + str(self.route)  +'  Strategy: ' + str(self.strategy))
+        return print( ' Route: ' + str(self.route)  +'  Strategy: ' + str(self.strategy))
 
     def mutate(self):
         route = self.route

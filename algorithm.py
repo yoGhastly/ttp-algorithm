@@ -137,9 +137,6 @@ def evolution(size_of_population,num_of_generations,elim_type,cross_chance,tour,
 
 
 
-#evolution(10,50,'tournament',0.7,5,0.01)
-
-
 def greedy_solution():
     distance_matrix = tools.distance_array
     index_pool = np.arange(0,distance_matrix.shape[0])

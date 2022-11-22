@@ -6,7 +6,7 @@ from operator import itemgetter
 import time
 start_time = time.time()
 
-np.set_printoptions(threshold=np.nan)
+np.set_printoptions(threshold=int(1e6))
 
 
 # Data import
@@ -146,8 +146,9 @@ def get_list_of_ordered_items(strategy):
 
 
 # ['most_expensive','lightest','best_ratio']
-#print(get_list_of_ordered_items('best_ratio'))
-#print("--- %s seconds ---" % (time.time() - start_time))
+print('-----List of items ordered by best ratio-----')
+print(get_list_of_ordered_items('best_ratio'))
+print("--- %s seconds ---" % (time.time() - start_time))
 
 items_ordered_me,items_ordered_li,items_ordered_br= get_list_of_ordered_items('most_expensive'),get_list_of_ordered_items('lightest'),get_list_of_ordered_items('best_ratio')
 
